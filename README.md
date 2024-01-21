@@ -10,7 +10,7 @@ Assuming you have followed steps in the section *Before you begin*. At this poin
 * Installed the Google Cloud CLI locally, and initialised it.
 * Created a python virtual environment for the project.
 
-:1: Ensure you have the required package dependencies installed in your python environment.
+::1:: Ensure you have the required package dependencies installed in your python environment.
 
 Option A: if following these instructions for the specific `zwift-cleaner` workflow then install the packages from `requirements.txt`.
 
@@ -25,7 +25,7 @@ pip install functions-framework
 pip freeze > requirements.txt
 ```
 
-:2: Initialise the gcloud CLI, and follow the steps to activate the correct project and choose your region.
+::2:: Initialise the gcloud CLI, and follow the steps to activate the correct project and choose your region.
 
 ```
 gcloud init
@@ -35,22 +35,25 @@ gcloud init
 gcloud auth application-default login
 ```
 
-:3: Deploy your cloud function (in this case `hello_get`), the `region` argument should be the region you set in the initialisation step above (in my case I've chosen to use `europe-west1`).
+::3:: Follow the steps in [this](https://jessicasalbert.medium.com/holding-your-hand-through-stravas-api-e642d15695f2) blog to set-up a Strava API connected to your Strava account.
+
+::4:: Deploy your cloud function (in this case `get_last_strava_activity`), the `region` argument should be the region you set in the initialisation step above (in my case I've chosen to use `europe-west1`), and the text `SECRET_TOKEN` for your Strava app.
 
 In this deployment the `no-allow-unauthenticated` argument will ensure that only authorised users can call the deployed function.
 
 ```
-gcloud functions deploy python-http-function \
+gcloud functions deploy get_last_strava_activity \
 --gen2 \
 --runtime=python311 \
 --region=europe-west1 \
 --source=. \
---entry-point=hello_get \
---trigger-http
---no-allow-unauthenticated
+--entry-point=get_last_strava_activity \
+--trigger-http \
+--no-allow-unauthenticated \
+--update-env-vars STRAVA_ACCESS_TOKEN=SECRET_TOKEN
 ```
 
-:4: Check the function, replacing `URI` with the URI that was returned from the above command.
+::5:: Check the function, replacing `URI` with the URI that was returned from the above command. This should return the title of your last Strava activity.
 
 ```
 curl -m 70 -X POST URI \
@@ -58,3 +61,4 @@ curl -m 70 -X POST URI \
     -H "Content-Type: application/json" \
     -d '{}'
 ```
+
