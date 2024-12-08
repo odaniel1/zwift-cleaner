@@ -1,26 +1,38 @@
-import functions_framework
-from markupsafe import escape
-import requests
+from get_matching_files import get_matching_files
+from fit_to_tcx import fit_to_tcx
+from merge_tcx_files import merge_tcx_files
+from strip_position_from_tcx import strip_position_from_tcx
+from datetime import datetime
+from strava_auth import authorize_with_strava
+from strava_write import write_to_strava
+from stravalib.client import Client
+import tempfile
+import re
 import os
 
-# [START functions_get_last_strava_activity]
-@functions_framework.http
-def get_last_strava_activity(request):
-    access_token = os.environ.get('STRAVA_ACCESS_TOKEN')
+zwift_path = '/mnt/c/Users/Owen/Documents/Zwift/Activities'
+today = datetime.today().strftime('%Y-%m-%d')
 
-    headers = {
-        'Authorization': f'Bearer {access_token}'
-    }
-    response = requests.get('https://www.strava.com/api/v3/athlete/activities', headers=headers)
+todays_fit_files = get_matching_files(zwift_path, today + ".*")
 
-    if response.status_code == 200:
-        activities = response.json()
-        if activities:
-            last_activity = activities[0]  # Get the most recent activity
-            return f'Last activity title: {last_activity["name"]}'
-        else:
-            return 'No activities found for this user.'
-    else:
-        return f'Error: Unable to fetch activities. Status code: {response.status_code}'
+with tempfile.TemporaryDirectory() as temp_dir:
+    temp_paths = []
+
+    for f in todays_fit_files:
+        fit_path = os.path.join(zwift_path,f)
+        tcx_path = os.path.join(temp_dir,re.sub(".fit",".tcx", f))
+
+        fit_to_tcx(fit_path, tcx_path)
+
+        temp_paths.append(tcx_path)
     
-# [END functions_get_last_strava_activity]
+    merged_path = os.path.join(temp_dir, 'merged.tcx')
+    merge_tcx_files(temp_paths, merged_path)
+    
+    cleaned_path = os.path.join(temp_dir, 'cleaned.tcx')
+    
+    strip_position_from_tcx(merged_path, cleaned_path)
+   
+    access_token = authorize_with_strava()
+    client = Client()
+    write_to_strava(cleaned_path, access_token) 
