@@ -2,63 +2,38 @@
 # zwift-cleaner
 Clean Zwift '.fit' files for a happy Strava feed.
 
-## Getting Started with Cloud Functions
-Basic project agnostic set-up is well documented by Google in [this](https://cloud.google.com/functions/docs/tutorials/http) tutorial, which is specifically targeted at using Google Cloud Functions from a local command line environment (as opposed to developing cloud functions from the GCP Console).
+Zwift cleaner processes locally held `.fit` files, stripping them of their location data before pushing them to your Strava feed.
 
-Assuming you have followed steps in the section *Before you begin*. At this point you should have:
-* Created a project in the Google Cloud console, with billing  and the appropriate API's enabled.
-* Installed the Google Cloud CLI locally, and initialised it.
-* Created a python virtual environment for the project.
+When `main.py` is run, the following workflow is executed:
 
-::1:: Ensure you have the required package dependencies installed in your python environment.
+1. Any `.fit` files within your Zwift `/Activities` folder which match today's date are converted to `.tcx` files and saved as temporary files.
 
-Option A: if following these instructions for the specific `zwift-cleaner` workflow then install the packages from `requirements.txt`.
+2. If there are more than one matched file, files are combined into a single activity.
 
-```
-pip install -r requirements. txt
-```
+3. Latitude and longitude data are stripped from the combined activity.
 
-Option B: if you happen to be reading this as a generic into to deploying cloud functions, then install `functions-framework` and then write/update your `requirements.txt`.
+4. Authentication with Strava is made, and the resulting `.tcx` file is uploaded to the associated Strava account with the title 'Turbo Session'.
 
-```
-pip install functions-framework
-pip freeze > requirements.txt
-```
+As a user - when running this script a browser window will open asking you to confirm that you are happy for the App to write to Strava.
 
-::2:: Initialise the gcloud CLI, and follow the steps to activate the correct project and choose your region.
+## Setup
+### Package management
+Required packages are listed in `requirements.txt`.
+Note that the `fit-to-tcx` package needs to be installed from [this](https://github.com/odaniel1/FIT-to-TCX) fork, which has been updated to ensure that power data is not disregarded.
 
-```
-gcloud init
-```
+### Strava App
+You will need to have a [Strava app](https://developers.strava.com/) associated with your account.
+
+### Secret management
+In your local project you need to create a file called `constants.py`. This should have the following contents:
 
 ```
-gcloud auth application-default login
+CLIENT_ID = '<your strava client id>'
+CLIENT_SECRET = '<your strava client secret>'
+zwift_path = '<path to your zwift Activities folder>'
 ```
 
-::3:: Follow the steps in [this](https://jessicasalbert.medium.com/holding-your-hand-through-stravas-api-e642d15695f2) blog to set-up a Strava API connected to your Strava account.
+### Browser
+During the authentication of the Strava app, a browser window will open asking for authorisation for the app to write files to Strava.
 
-::4:: Deploy your cloud function (in this case `get_last_strava_activity`), the `region` argument should be the region you set in the initialisation step above (in my case I've chosen to use `europe-west1`), and the text `SECRET_TOKEN` for your Strava app.
-
-In this deployment the `no-allow-unauthenticated` argument will ensure that only authorised users can call the deployed function.
-
-```
-gcloud functions deploy get_last_strava_activity \
---gen2 \
---runtime=python311 \
---region=europe-west1 \
---source=. \
---entry-point=get_last_strava_activity \
---trigger-http \
---no-allow-unauthenticated \
---update-env-vars STRAVA_ACCESS_TOKEN=SECRET_TOKEN
-```
-
-::5:: Check the function, replacing `URI` with the URI that was returned from the above command. This should return the title of your last Strava activity.
-
-```
-curl -m 70 -X POST URI \
-    -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
-    -H "Content-Type: application/json" \
-    -d '{}'
-```
-
+This is currently set-up to open in Chrome, and assumes that you have Chrome on your machine.
