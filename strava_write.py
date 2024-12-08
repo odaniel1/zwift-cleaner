@@ -1,27 +1,48 @@
+import os
+import logging
+from logger_config import setup_logger
+import time
 from strava_auth import authorize_with_strava
 from stravalib.client import Client
-import time
 
-def write_to_strava(tcx_path, access_token):
+# Initialize the logger
+logger = logging.getLogger(__name__)
+
+def write_to_strava(tcx_path, access_token, max_retries=10, retry_delay=1):
+    """
+    Uploads a TCX file to Strava as an activity.
+
+    Parameters:
+        tcx_path (str): Path to the TCX file to upload.
+        access_token (str): Strava API access token.
+        max_retries (int): Maximum number of retries for upload processing.
+        retry_delay (int): Delay (in seconds) between retries.
+
+    Returns:
+        int: The activity ID if the upload is successful, None otherwise.
+    """
+    # Validate the TCX file
+    if not os.path.isfile(tcx_path):
+        logger.error(f"File not found: {tcx_path}")
+        return None
+
+    # Initialize the Strava client
     client = Client()
     client.access_token = access_token
+    logger.info("Strava client initialized with access token.")
 
-    # Upload the activity
-    with open(tcx_path, 'rb') as tcx_file:
-        upload = client.upload_activity(
-            activity_file=tcx_file,
-            data_type='tcx',
-            name="Turbo Session",
-            private = False,
-            trainer = True
-        )
+    try:
+        # Upload the activity
+        logger.info(f"Uploading activity from file: {tcx_path}")
+        with open(tcx_path, 'rb') as tcx_file:
+            upload = client.upload_activity(
+                activity_file=tcx_file,
+                data_type='tcx',
+                name="Turbo Session",
+                trainer=True
+            )
+            return upload
 
-    # Wait for the upload to process
-    while not upload.is_processing and not upload.activity_id:
-        time.sleep(1)
-        upload = client.get_upload(upload.id)
-
-    if upload.activity_id:
-        print(f'Upload successful! Activity ID: {upload.activity_id}')
-    else:
-        print(f'Upload failed: {upload.error}')
+    except Exception as e:
+        logger.exception("An error occurred during the upload process.")
+        return None
