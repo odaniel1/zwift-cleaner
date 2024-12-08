@@ -6,11 +6,12 @@ from datetime import datetime
 from strava_auth import authorize_with_strava
 from strava_write import write_to_strava
 from stravalib.client import Client
+import constants
 import tempfile
 import re
 import os
 
-zwift_path = '/mnt/c/Users/Owen/Documents/Zwift/Activities'
+zwift_path = constants.zwift_path
 today = datetime.today().strftime('%Y-%m-%d')
 
 todays_fit_files = get_matching_files(zwift_path, today + ".*")
