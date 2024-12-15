@@ -15,6 +15,8 @@ def fit_to_tcx(fit_path, tcx_path):
         tcx_path (str): Path to save the output .tcx file.
     """
 
+    logger.info(f"Converting {fit_path} to {tcx_path}")
+
     # Validate input file exists
     if not os.path.isfile(fit_path):
         logger.error(f"Input .fit file does not exist: {fit_path}")

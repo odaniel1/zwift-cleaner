@@ -17,6 +17,8 @@ def get_matching_files(directory_path, pattern):
     Returns:
         List: A sorted list of file names that match the pattern.
     """
+    logger.info(f"Looking for fit files in {directory_path} matching pattern: {pattern}")
+
     try:
         # Validate that the directory exists
         if not os.path.isdir(directory_path):
@@ -36,8 +38,8 @@ def get_matching_files(directory_path, pattern):
 
         # Filter files based on the regular expression pattern
         matching_files = [f for f in files if regex.fullmatch(f)]
-        logging.info(f"Found {len(matching_files)} matching files.")
-
+        logger.info(f"Found {len(matching_files)} fit file(s): {matching_files}")
+        
         return sorted(matching_files)
     except PermissionError:
         logging.error(f"Permission denied for directory '{directory_path}'.")
