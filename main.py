@@ -2,6 +2,7 @@ import os
 import re
 import logging
 import tempfile
+import time
 from datetime import datetime
 from logger_config import setup_logger
 from get_matching_files import get_matching_files
@@ -10,6 +11,7 @@ from merge_tcx_files import merge_tcx_files
 from strip_position_from_tcx import strip_position_from_tcx
 from strava_auth import authorize_with_strava
 from strava_write import write_to_strava
+from strava_open import get_latest_activity_id, open_activity_url
 import constants
 
 # Initialize logging
@@ -57,6 +59,14 @@ if __name__ == "__main__":
                 logger.info(f"Upload successful! Activity ID: {upload.upload_id}")
             else:
                 logger.error("Failed to upload activity to Strava.")
+            
+            # Open url of new activity
+            time.sleep(5)
+            activity_id = get_latest_activity_id(access_token)
+            open_activity_url(activity_id, constants.chrome_path)
+            #athlete_id = get_athlete_id(access_token)
+            #open_strava_profile(athlete_id, constants.chrome_path)
+
     except Exception as e:
         logger.exception("An unexpected error occurred in the workflow.")
 

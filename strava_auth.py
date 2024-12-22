@@ -89,12 +89,12 @@ def authorize_with_strava():
         authorize_url = client.authorization_url(
             client_id=CLIENT_ID,
             redirect_uri=REDIRECT_URI,
-            scope=['activity:write']
+            scope=['activity:write','activity:read_all']
         )
         logger.info(f"Generated Strava authorization URL: {authorize_url}")
 
         # Open the authorization URL in Chrome
-        chrome_path = "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
+        chrome_path = constants.chrome_path
         if os.path.exists(chrome_path):
             logger.info("Opening authorization URL in Chrome.")
             webbrowser.get(f'"{chrome_path}" %s').open(authorize_url)
