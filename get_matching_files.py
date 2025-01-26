@@ -6,7 +6,7 @@ from logger_config import setup_logger
 # Get a logger for this module
 logger = logging.getLogger(__name__)
 
-def get_matching_files(directory_path, pattern):
+def get_matching_files(directory_path, pattern, min_size = None):
     """
     Returns a list of files in the specified directory that match the given regular expression pattern.
 
@@ -39,8 +39,15 @@ def get_matching_files(directory_path, pattern):
         # Filter files based on the regular expression pattern
         matching_files = [f for f in files if regex.fullmatch(f)]
         logger.info(f"Found {len(matching_files)} fit file(s): {matching_files}")
-        
-        return sorted(matching_files)
+
+        if min_size == None:
+            return sorted(matching_files)
+        else:
+            # Filter files to remove files smaller than min_size
+            big_files = [f for f in matching_files if os.path.getsize(directory_path + '/' + f) > min_size]
+            logger.info(f"Found {len(big_files)} fit file(s) larger than {min_size} bytes: {big_files}")
+            return sorted(big_files)
+    
     except PermissionError:
         logging.error(f"Permission denied for directory '{directory_path}'.")
         return []

@@ -22,11 +22,6 @@ def fit_to_tcx(fit_path, tcx_path):
         logger.error(f"Input .fit file does not exist: {fit_path}")
         raise FileNotFoundError(f"Input file not found: {fit_path}")
     
-    # Issue warning if input file is <5kb, which can indicate an empty/corrupt file
-    file_bytes = os.path.getsize(fit_path)
-    if file_bytes < 5 * 1024:
-        logger.warning(f"Input .fit file is only {round(file_bytes/1024)}kb")
-
     # Validate output directory exists
     output_dir = os.path.dirname(tcx_path)
     if output_dir and not os.path.isdir(output_dir):

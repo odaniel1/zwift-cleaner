@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import logging
 import tempfile
 import time
@@ -28,8 +29,13 @@ if __name__ == "__main__":
         zwift_path = constants.zwift_path
         today = datetime.today().strftime('%Y-%m-%d')
 
-        # Get today's fit files
-        todays_fit_files = get_matching_files(zwift_path, today + ".*")
+        # Get today's fit files; excluding files smaller than 5kb
+        todays_fit_files = get_matching_files(zwift_path, today + ".*", 5 * 1024)
+
+        # Stop if there are no files
+        if len(todays_fit_files) == 0:
+            logger.error(f"No valid fit files in {zwift_path}")
+            sys.exit(1)
 
         # Process files in a temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
