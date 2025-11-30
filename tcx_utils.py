@@ -190,3 +190,32 @@ def strip_position_from_tcx(tcx_path, output_path):
     except Exception as e:
         logger.exception("An unexpected error occurred.")
         return f"Error: An unexpected error occurred: {e}"
+    
+def process_files_for_date(fit_files, date, temp_dir):
+    """
+    Converts .fit files to .tcx, merges them, and strips position data for a given date's files.
+    Returns the path to the cleaned TCX file, or None if no files were processed.
+    Args:
+        fit_files (list): List of full paths to .fit files for the date.
+        date (str): The date string (YYYY-MM-DD) for naming outputs.
+        temp_dir (str): Path to the temporary directory for intermediate files.
+    Returns:
+        str: Path to the cleaned TCX file, or None if no files were processed.
+    """
+    temp_paths = []
+    # Convert .fit to .tcx
+    for fit_path in fit_files:
+        tcx_filename = re.sub(r".fit$", ".tcx", os.path.basename(fit_path))
+        tcx_path = os.path.join(temp_dir, tcx_filename)
+        fit_to_tcx(fit_path, tcx_path)
+        temp_paths.append(tcx_path)
+
+    # Merge TCX files
+    merged_path = os.path.join(temp_dir, f'merged_{date}.tcx')
+    merge_tcx_files(temp_paths, merged_path)
+
+    # Strip position data
+    cleaned_path = os.path.join(temp_dir, f'cleaned_{date}.tcx')
+    strip_position_from_tcx(merged_path, cleaned_path)
+
+    return cleaned_path

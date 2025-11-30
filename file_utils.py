@@ -45,6 +45,10 @@ def get_matching_files(directory_path, pattern, min_size = None):
         else:
             # Filter files to remove files smaller than min_size
             big_files = [f for f in matching_files if os.path.getsize(directory_path + '/' + f) > min_size]
+            
+            # Include the path in the file name
+            big_files = [os.path.join(directory_path, f) for f in big_files]
+
             logger.info(f"Found {len(big_files)} fit file(s) larger than {min_size} bytes: {big_files}")
             return sorted(big_files)
     
