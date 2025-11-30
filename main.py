@@ -27,13 +27,34 @@ if __name__ == "__main__":
     try:
         # Define paths and patterns
         zwift_path = constants.zwift_path
-        today = datetime.today().strftime('%Y-%m-%d')
 
-        # Get today's fit files; excluding files smaller than 5kb
-        todays_fit_files = get_matching_files(zwift_path, today + ".*", 5 * 1024)
+        # Handle command line argument for target_date
+        if len(sys.argv) == 1:
+            target_date = datetime.today().strftime('%Y-%m-%d')
+            logger.info(f"No date argument provided. Using today's date: {target_date} as default.")
+        elif len(sys.argv) == 2:
+            arg_date = sys.argv[1]
+            if re.match(r"^\d{4}-\d{2}-\d{2}$", arg_date):
+                try:
+                    # Try to parse the date to ensure it's valid
+                    datetime.strptime(arg_date, "%Y-%m-%d")
+                    target_date = arg_date
+                    logger.info(f"Using provided date argument: {target_date}")
+                except ValueError:
+                    logger.error("Invalid date value. Please provide a valid date in YYYY-MM-DD format.")
+                    sys.exit(1)
+            else:
+                logger.error("Invalid date argument. Please provide date in YYYY-MM-DD format or omit for today's date.")
+                sys.exit(1)
+        else:
+            logger.error("Too many arguments. Please provide only one date argument in YYYY-MM-DD format or omit for today's date.")
+            sys.exit(1)
+
+        # Get fit files for target date; excluding files smaller than 5kb
+        fit_files = get_matching_files(zwift_path, target_date + ".*", 5 * 1024)
 
         # Stop if there are no files
-        if len(todays_fit_files) == 0:
+        if len(fit_files) == 0:
             logger.error(f"No valid fit files in {zwift_path}")
             sys.exit(1)
 
@@ -42,9 +63,9 @@ if __name__ == "__main__":
             temp_paths = []
 
             # Convert .fit to .tcx
-            for fit_file in todays_fit_files:
-                fit_path = os.path.join(zwift_path, fit_file)
-                tcx_path = os.path.join(temp_dir, re.sub(r".fit$", ".tcx", fit_file))
+            for f in fit_files:
+                fit_path = os.path.join(zwift_path, f)
+                tcx_path = os.path.join(temp_dir, re.sub(r".fit$", ".tcx", f))
                 fit_to_tcx(fit_path, tcx_path)
                 temp_paths.append(tcx_path)
 
@@ -60,18 +81,10 @@ if __name__ == "__main__":
             access_token = authorize_with_strava()
 
             # Upload to Strava
-            upload = write_to_strava(cleaned_path, access_token)
-            if upload:
-                logger.info(f"Upload successful! Activity ID: {upload.upload_id}")
-            else:
-                logger.error("Failed to upload activity to Strava.")
-            
-            # Open url of new activity
-            time.sleep(5)
-            activity_id = get_latest_activity_id(access_token)
-            open_activity_url(activity_id, constants.chrome_path)
-            #athlete_id = get_athlete_id(access_token)
-            #open_strava_profile(athlete_id, constants.chrome_path)
+            activity = write_to_strava(cleaned_path, access_token)
+
+            # Open the new activity in browser
+            open_activity_url(activity.id, constants.chrome_path)
 
     except Exception as e:
         logger.exception("An unexpected error occurred in the workflow.")

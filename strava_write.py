@@ -41,8 +41,11 @@ def write_to_strava(tcx_path, access_token, max_retries=10, retry_delay=1):
                 name="Turbo Session",
                 trainer=True
             )
-            return upload
 
+            activity = upload.wait()
+            logger.info(f"Activity created, activity_id: {activity.id}")
+            return activity      
+          
     except Exception as e:
         logger.exception("An error occurred during the upload process.")
         return None
