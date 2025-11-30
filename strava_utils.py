@@ -2,6 +2,7 @@ import threading
 import webbrowser
 import os
 import logging
+import webbrowser
 from logger_config import setup_logger
 from flask import Flask, request
 from stravalib.client import Client
@@ -118,3 +119,54 @@ def authorize_with_strava():
     stop_flask(server_thread)
 
     return auth_state.token
+
+def open_activity_url(activity_id, url_path):
+    activity_url = f'https://www.strava.com/activities/{activity_id}' 
+    chrome_path = constants.chrome_path
+
+    if os.path.exists(url_path):
+        webbrowser.get(f'"{url_path}" %s').open(activity_url)
+    else:
+        logger.warning(f"No browserfound at {url_path}")
+
+def write_to_strava(tcx_path, access_token, max_retries=10, retry_delay=1):
+    """
+    Uploads a TCX file to Strava as an activity.
+
+    Parameters:
+        tcx_path (str): Path to the TCX file to upload.
+        access_token (str): Strava API access token.
+        max_retries (int): Maximum number of retries for upload processing.
+        retry_delay (int): Delay (in seconds) between retries.
+
+    Returns:
+        int: The activity ID if the upload is successful, None otherwise.
+    """
+    # Validate the TCX file
+    if not os.path.isfile(tcx_path):
+        logger.error(f"File not found: {tcx_path}")
+        return None
+
+    # Initialize the Strava client
+    client = Client()
+    client.access_token = access_token
+    logger.info("Strava client initialized with access token.")
+
+    try:
+        # Upload the activity
+        logger.info(f"Uploading activity from file: {tcx_path}")
+        with open(tcx_path, 'rb') as tcx_file:
+            upload = client.upload_activity(
+                activity_file=tcx_file,
+                data_type='tcx',
+                name="Turbo Session",
+                trainer=True
+            )
+
+            activity = upload.wait()
+            logger.info(f"Activity created, activity_id: {activity.id}")
+            return activity      
+          
+    except Exception as e:
+        logger.exception("An error occurred during the upload process.")
+        return None

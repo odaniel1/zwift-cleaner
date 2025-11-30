@@ -7,12 +7,8 @@ import time
 from datetime import datetime
 from logger_config import setup_logger
 from get_matching_files import get_matching_files
-from fit_to_tcx import fit_to_tcx
-from merge_tcx_files import merge_tcx_files
-from strip_position_from_tcx import strip_position_from_tcx
-from strava_auth import authorize_with_strava
-from strava_write import write_to_strava
-from strava_open import get_latest_activity_id, open_activity_url
+from tcx_utils import fit_to_tcx; merge_tcx_files; strip_position_from_tcx
+from strava_utils import authorize_with_strava; write_to_strava; open_activity_url
 import constants
 
 # Initialize logging
