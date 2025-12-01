@@ -1,172 +1,106 @@
-import threading
-import webbrowser
+import json
 import os
 import logging
 import webbrowser
-from logger_config import setup_logger
-from flask import Flask, request
 from stravalib.client import Client
-import constants
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import parse_qs, urlparse
+from constants import CLIENT_ID, CLIENT_SECRET
 
 # Initialize the logger
 logger = logging.getLogger(__name__)
 
-# Strava API client configuration
-CLIENT_ID = constants.CLIENT_ID
-CLIENT_SECRET = constants.CLIENT_SECRET
-REDIRECT_URI = 'http://localhost:5000/callback'  # Flask will listen on this URI
+TOKEN_FILE = "strava_tokens.json"
 
-# Flask app
-app = Flask(__name__)
+# Step 1: Get authorization code via browser
+class CallbackHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        query = parse_qs(urlparse(self.path).query)
+        self.server.auth_code = query.get('code', [None])[0]
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Success! You can close this window.")
+    
+    def log_message(self, format, *args):
+        pass
 
-# Strava client
-client = Client()
-
-# Shared variable for authorization token (managed via threading)
-class AuthorizationState:
-    def __init__(self):
-        self.token = None
-        self.lock = threading.Condition()
-
-auth_state = AuthorizationState()
-
-@app.route('/callback')
-def callback():
-    """
-    Handle the redirect from Strava and extract the authorization code.
-    """
-    authorization_code = request.args.get('code')
-    if not authorization_code:
-        logger.error("No authorization code provided.")
-        return "Authorization failed or no code provided.", 400
-
+def get_auth_code():
+    client = Client()
+    auth_url = client.authorization_url(
+        client_id=CLIENT_ID,
+        redirect_uri="http://localhost:8000",
+        scope=["activity:write", "activity:read_all"]
+    )
+    print(f"\nOpen this URL in your browser:\n{auth_url}\n")
+    
     try:
-        # Exchange the authorization code for an access token
-        token_response = client.exchange_code_for_token(
+        import webbrowser
+        webbrowser.open(auth_url)
+    except:
+        pass
+    
+    server = HTTPServer(('localhost', 8000), CallbackHandler)
+    server.auth_code = None
+    server.handle_request()
+    return server.auth_code
+
+# Step 2: Get authenticated client
+def get_client():
+    client = Client()
+    
+    try:
+        # Try to use existing tokens
+        with open(TOKEN_FILE) as f:
+            tokens = json.load(f)
+        
+        # Refresh the access token
+        new_tokens = client.refresh_access_token(
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
-            code=authorization_code
+            refresh_token=tokens['refresh_token']
         )
-        with auth_state.lock:
-            auth_state.token = token_response['access_token']
-            auth_state.lock.notify()
-
-        logger.info("Authorization successful. Access token obtained.")
-        return "Authorization successful! You can close this page.", 200
-    except Exception as e:
-        logger.exception("Failed to exchange authorization code for access token.")
-        return f"Authorization failed: {e}", 500
-
-
-def run_flask():
-    """
-    Run the Flask app in a separate thread.
-    """
-    try:
-        logger.info("Starting Flask server.")
-        app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)
-    except Exception as e:
-        logger.exception("Error occurred while starting the Flask server.")
-
-
-def stop_flask(server_thread):
-    """
-    Stop the Flask app by terminating its thread.
-    """
-    if server_thread and server_thread.is_alive():
-        logger.info("Stopping Flask server.")
-        server_thread.join(timeout=1)
-
-
-def authorize_with_strava():
-    """
-    Runs the Strava authorization workflow.
-
-    Returns:
-        str: The access token obtained from the authorization process.
-    """
-    # Generate the authorization URL
-    try:
-        authorize_url = client.authorization_url(
+        
+        # Save refreshed tokens
+        with open(TOKEN_FILE, 'w') as f:
+            json.dump(new_tokens, f)
+        
+        client.access_token = new_tokens['access_token']
+        
+    except FileNotFoundError:
+        # First time - do full OAuth flow
+        code = get_auth_code()
+        tokens = client.exchange_code_for_token(
             client_id=CLIENT_ID,
-            redirect_uri=REDIRECT_URI,
-            scope=['activity:write','activity:read_all']
+            client_secret=CLIENT_SECRET,
+            code=code
         )
-        logger.info(f"Generated Strava authorization URL: {authorize_url}")
+        
+        # Save tokens
+        with open(TOKEN_FILE, 'w') as f:
+            json.dump(tokens, f)
+        
+        client.access_token = tokens['access_token']
+    
+    return client
 
-        # Open the authorization URL in Chrome
-        chrome_path = constants.chrome_path
-        if os.path.exists(chrome_path):
-            logger.info("Opening authorization URL in Chrome.")
-            webbrowser.get(f'"{chrome_path}" %s').open(authorize_url)
-        else:
-            logger.warning(f"Chrome not found at {chrome_path}. Please open the URL manually: {authorize_url}")
-    except Exception as e:
-        logger.exception("Failed to generate or open the authorization URL.")
-        return None
+# Step 3: Upload TCX file
+def upload_tcx(client, tcx_file_path, name="Uploaded Activity", activity_type="ride", trainer=False):
+    with open(tcx_file_path, 'r') as f:
+        upload = client.upload_activity(
+            activity_file=f,
+            data_type='tcx',
+            name=name,
+            activity_type=activity_type
+        )
 
-    # Start the Flask app in a separate thread
-    server_thread = threading.Thread(target=run_flask, daemon=True)
-    server_thread.start()
-
-    # Wait for the authorization token
-    with auth_state.lock:
-        while not auth_state.token:
-            logger.info("Waiting for user authorization...")
-            auth_state.lock.wait(timeout=5)
-
-    # Stop the Flask server
-    stop_flask(server_thread)
-
-    return auth_state.token
+        activity = upload.wait()
+        logger.info(f"Activity created, activity_id: {activity.id}")
+    return activity      
 
 def open_activity_url(activity_id, url_path):
     activity_url = f'https://www.strava.com/activities/{activity_id}' 
-    chrome_path = constants.chrome_path
 
     if os.path.exists(url_path):
         webbrowser.get(f'"{url_path}" %s').open(activity_url)
     else:
         logger.warning(f"No browserfound at {url_path}")
-
-def write_to_strava(tcx_path, access_token, max_retries=10, retry_delay=1):
-    """
-    Uploads a TCX file to Strava as an activity.
-
-    Parameters:
-        tcx_path (str): Path to the TCX file to upload.
-        access_token (str): Strava API access token.
-        max_retries (int): Maximum number of retries for upload processing.
-        retry_delay (int): Delay (in seconds) between retries.
-
-    Returns:
-        int: The activity ID if the upload is successful, None otherwise.
-    """
-    # Validate the TCX file
-    if not os.path.isfile(tcx_path):
-        logger.error(f"File not found: {tcx_path}")
-        return None
-
-    # Initialize the Strava client
-    client = Client()
-    client.access_token = access_token
-    logger.info("Strava client initialized with access token.")
-
-    try:
-        # Upload the activity
-        logger.info(f"Uploading activity from file: {tcx_path}")
-        with open(tcx_path, 'rb') as tcx_file:
-            upload = client.upload_activity(
-                activity_file=tcx_file,
-                data_type='tcx',
-                name="Turbo Session",
-                trainer=True
-            )
-
-            activity = upload.wait()
-            logger.info(f"Activity created, activity_id: {activity.id}")
-            return activity      
-          
-    except Exception as e:
-        logger.exception("An error occurred during the upload process.")
-        return None

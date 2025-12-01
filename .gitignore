@@ -2,3 +2,4 @@ env-zwift-cleaner/
 constants.py
 __pycache__/
 *.log
+strava_tokens.json
