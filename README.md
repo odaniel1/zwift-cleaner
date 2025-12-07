@@ -1,5 +1,9 @@
 # zwift-cleaner
 
+<p align="center">
+  <img src="zwift-cleaner.png" alt="zwift-cleaner" width="256">
+</p>
+
 Tired of Zwift rides cluttering your Strava feed with routes that appear in far‑off places? `zwift-cleaner` is a Windows utility that automatically cleans and uploads your Zwift activities to Strava, removing location data for privacy and a tidier feed.
 
 The typical workflow is driven by the `run_zwift_and_clean.bat` script, which launches Zwift and then calls the Python code in `main.py` to process your latest activities. Under the hood, the tool:
