@@ -43,7 +43,7 @@ if __name__ == "__main__":
                 activity = upload_tcx(strava_client, date_tcx_processed, name="Turbo Session", activity_type="ride", trainer=True)
 
                 # Open the new activity in browser
-                open_activity_url(activity.id, constants.chrome_path)
+                open_activity_url(activity.id)
 
     except Exception as e:
         logger.exception("An unexpected error occurred in the workflow.")

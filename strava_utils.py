@@ -1,5 +1,4 @@
 import json
-import os
 import logging
 import webbrowser
 from stravalib.client import Client
@@ -97,10 +96,6 @@ def upload_tcx(client, tcx_file_path, name="Uploaded Activity", activity_type="r
         logger.info(f"Activity created, activity_id: {activity.id}")
     return activity      
 
-def open_activity_url(activity_id, url_path):
+def open_activity_url(activity_id):
     activity_url = f'https://www.strava.com/activities/{activity_id}' 
-
-    if os.path.exists(url_path):
-        webbrowser.get(f'"{url_path}" %s').open(activity_url)
-    else:
-        logger.warning(f"No browserfound at {url_path}")
+    webbrowser.open(activity_url)
