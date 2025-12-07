@@ -1,20 +1,15 @@
-
 # zwift-cleaner
-Clean Zwift '.fit' files for a happy Strava feed.
 
-Zwift cleaner processes locally held `.fit` files, stripping them of their location data before pushing them to your Strava feed.
+Tired of Zwift rides cluttering your Strava feed with routes that appear in far‑off places? `zwift-cleaner` is a Windows utility that automatically cleans and uploads your Zwift activities to Strava, removing location data for privacy and a tidier feed.
 
-When `main.py` is run, the following workflow is executed:
+The typical workflow is driven by the `run_zwift_and_clean.bat` script, which launches Zwift and then calls the Python code in `main.py` to process your latest activities. Under the hood, the tool:
 
-1. Any `.fit` files within your Zwift `/Activities` folder which match today's date are converted to `.tcx` files and saved as temporary files.
+1. Finds all `.fit` files in your Zwift `/Activities` folder that match today's date.
+2. Converts these `.fit` files to `.tcx` format and, if multiple files are found, combines them into a single activity.
+3. Strips all latitude and longitude data from the combined activity file.
+4. Authenticates with Strava and uploads the cleaned `.tcx` file to your account with the title `Turbo Session`.
 
-2. If there are more than one matched file, files are combined into a single activity.
-
-3. Latitude and longitude data are stripped from the combined activity.
-
-4. Authentication with Strava is made, and the resulting `.tcx` file is uploaded to the associated Strava account with the title 'Turbo Session'.
-
-As a user - when running this script a browser window will open asking you to confirm that you are happy for the App to write to Strava.
+When the upload step runs for the first time, a browser window will open asking you to authorize the app to write activities to your Strava account.
 
 ## Setup
 ### Package management
@@ -25,15 +20,14 @@ Note that the `fit-to-tcx` package needs to be installed from [this](https://git
 You will need to have a [Strava app](https://developers.strava.com/) associated with your account.
 
 ### Secret management
-In your local project you need to create a file called `constants.py`. This should have the following contents:
+In your local project directory you need a `constants.py` file, which is **not** committed to source control. It should define your Zwift paths and Strava app credentials:
 
+```python
+# zwift paths
+ZWIFT_ACTIVITIES_PATH = "<path to your Zwift folder where activities are stored>"
+ZWIFT_EXECUTABLE_PATH = "<path to your Zwift executable>"
+
+# Strava app secrets
+CLIENT_ID = "<your Strava app client ID>"
+CLIENT_SECRET = "<your Strava app client secret>"
 ```
-CLIENT_ID = '<your strava client id>'
-CLIENT_SECRET = '<your strava client secret>'
-zwift_path = '<path to your zwift Activities folder>'
-```
-
-### Browser
-During the authentication of the Strava app, a browser window will open asking for authorisation for the app to write files to Strava.
-
-This is currently set-up to open in Chrome, and assumes that you have Chrome on your machine.
