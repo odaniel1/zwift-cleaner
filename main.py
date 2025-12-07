@@ -21,14 +21,14 @@ if __name__ == "__main__":
     try:
         # Define constants and get access token once.
         date_list = parse_dates_from_args(sys.argv, logger)
-        zwift_path = constants.zwift_path
+        zwift_activities_path = constants.zwift_activities_path
         strava_client = get_client()
 
         for target_date in date_list:
             logger.info(f"Processing date: {target_date}")
 
             # Get fit files for target date; excluding files smaller than 5kb
-            date_fit_files = get_matching_files(zwift_path, target_date + ".*", 5 * 1024)
+            date_fit_files = get_matching_files(zwift_activities_path, target_date + ".*", 5 * 1024)
 
             # If there are no valid files, continue to the next date
             if not date_fit_files:
