@@ -21,7 +21,7 @@ if __name__ == "__main__":
     try:
         # Define constants and get access token once.
         date_list = parse_dates_from_args(sys.argv, logger)
-        zwift_activities_path = constants.zwift_activities_path
+        zwift_activities_path = constants.ZWIFT_ACTIVITIES_PATH
         strava_client = get_client()
 
         for target_date in date_list:

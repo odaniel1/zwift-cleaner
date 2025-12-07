@@ -1,4 +1,4 @@
-env-zwift-cleaner/
+venv/
 constants.py
 __pycache__/
 *.log
